@@ -89,6 +89,9 @@ LDA_training.coord.dist <- function(calibration_data){
                                           starts_with("y"),
                                           starts_with("v"),
                                           starts_with("a")))
+  
+  pca_data_python <<- normalized_positions_tr
+  
   ##PCA in training set
   m_pca <<- normalized_positions_tr %>%
     dplyr::select(one_of(all_data_columns)) %>%
