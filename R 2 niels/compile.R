@@ -3,6 +3,7 @@
 ## CLEAN ENVIRONMENT
 rm(list = ls())
 
+
 ## CHARGE PACKAGES AND FUNCTIONS
 source("packages-functions.R")
 

@@ -4,9 +4,9 @@
 
 ## DATA EXTRACTION ####
 getwd()
-negation_info <- read.csv(file="/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Semester)/Perception And Action EXAM/data_R/negation_info.csv", header=TRUE, sep=",")
-negation_data <- read.csv(file="/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Semester)/Perception And Action EXAM/data_R/negation_data_simple.csv", header=TRUE, sep=",")
-negation_data_positions <- read.csv(file="/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Semester)/Perception And Action EXAM/data_R/negation_data_positions.csv", header=TRUE, sep=",")
+negation_info <- read.csv(file="data_R/negation_info.csv", header=TRUE, sep=",")
+negation_data <- read.csv(file="data_R/negation_data_simple.csv", header=TRUE, sep=",")
+negation_data_positions <- read.csv(file="data_R/negation_data_positions.csv", header=TRUE, sep=",")
 
 x <- paste0('x', sprintf("%03d", c(1:101)))
 y <- paste0('y', sprintf("%03d", c(1:101)))
@@ -53,7 +53,7 @@ ggplot(normalized_positions.means.traj, aes(x=X.Position.mean, y=Y.Position.mean
                       labels=c("Negative", "Positive"))+ 
   facet_grid(.~Expected_response) 
 
-ggsave('negation-data-mean-trajectory.png', plot = last_plot(), scale = 1, dpi = 300, path='paper/R/fig', width = 7, height = 5)
+ggsave('negation-data-mean-trajectory.png', plot = last_plot(), scale = 1, dpi = 300, path='fig', width = 7, height = 5)
 
 ## Dale and Duran Replication ####
 ### Analysis on X-coordinates flips
@@ -105,7 +105,7 @@ anova(control_model2.lda, m0.interaction.lda)
 ##CLASSIFIER PERFORMANCE ####
 ### Full LDA
 load('LDA-Full.RData')
-source("paper/R/norm_positions_LDA.R")
+source("norm_positions_LDA.R")
 
 normalized_positions.new <- normalized_positions %>%
   dplyr::select(Subject, Item.number, Polarity, Response, one_of(all_data_columns))
@@ -147,11 +147,13 @@ negation_data_positions <- dplyr::full_join(lda_measure.new.df, negation_data_po
 Palette1 <- c("#DB172A", "#1470A5")
 negation_data_true <- filter(negation_data, Response=='true')
 
+png(filename = "fig/OriginalLDA-negation.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(negation_data_true, "lda_measure", "Polarity")
-ggsave('OriginalLDA-negation.png', plot = last_plot(), scale = 1, dpi = 300, path='paper/R/fig', width = 7, height = 5)
+dev.off()
 
+png(filename = "fig/CoordsLDA-negation.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(negation_data_true, "lda_measure_coords", "Polarity")
-ggsave('CoordsLDA-negation.png', plot = last_plot(), scale = 1, dpi = 300, path='paper/R/fig', width = 7, height = 5)
+dev.off()
 
 
 
@@ -161,24 +163,29 @@ save(negation_data, negation_data_positions, file = "negation_data_processed.RDa
 ## OTHER MT MEASURES ####
 
 ### Max Deviation 
+png(filename = "fig/MD_negation.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(negation_data, 'MaxDeviation', 'Polarity')
-ggsave('MD_negation.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+dev.off()
 ### MaxLogRatio 
+png(filename = "fig/MaxRatio_negation.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(negation_data, 'MaxLogRatio', 'Polarity')
-ggsave('MaxRatio_negation.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+dev.off()
 ### AUC 
+png(filename = "fig/AUC_negation.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(negation_data, 'AUC', 'Polarity')
-ggsave('AUC_negation.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+dev.off()
 #### X-coordinate flips
+png(filename = "fig/Xflips_negation.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(negation_data, 'X.flips', 'Polarity')
-ggsave('Xflips_negation.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+dev.off()
 ### Acceleration component
+png(filename = "fig/Accflips_negation.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(negation_data, 'Acc.flips', 'Polarity')
-ggsave('Accflips_negation.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+dev.off()
 
 
 ## BASELINE ####
-source("paper/R/baseline.R")
+source("baseline.R")
 
 ### Mean Trajectory
 normalized_positions.means.subject <- ddply(normalized_positions.plot_true_af, c("Class", "Time.Step", "Subject"),
@@ -201,7 +208,7 @@ ggplot(normalized_positions.means.traj, aes(x=X.Position.mean, y=Y.Position.mean
   geom_errorbarh(aes(xmin=X.Position.mean-X.Position.se, xmax=X.Position.mean+X.Position.se), alpha=.4) + 
   theme_minimal()+
   expand_limits(x=c(-1.5,1.5)) 
-ggsave('TrajectoriesBaseline.png', plot = last_plot(), scale = 1, dpi = 300, path='paper/R/fig', width = 7, height = 5)
+ggsave('TrajectoriesBaseline.png', plot = last_plot(), scale = 1, dpi = 300, path='fig', width = 7, height = 5)
 
 ### LDA on baseline
 levels(negation_data.true_aff$Class) <- c('Early', "Late")
@@ -244,7 +251,7 @@ ggarrange(density, sp,
           ncol = 1, nrow = 2,  align = "v", 
           widths = c(1, 1), heights = c(1,0.5),
           common.legend = TRUE)
-ggsave('LDA-baseline.png', plot = last_plot(), scale = 1, dpi = 300, path='paper/R/fig', width = 7, height = 5)
+ggsave('LDA-baseline.png', plot = last_plot(), scale = 1, dpi = 300, path='fig', width = 7, height = 5)
 
 
 
@@ -450,7 +457,7 @@ ggarrange(p1, p2,
           ncol = 2, nrow = 1,  align = "hv", 
           widths = c(1, 1), heights = c(1,1), common.legend = TRUE, labels = c("A", "B"), legend='right')
 
-ggsave('auc_permutation_negation_1.png', plot = last_plot(), scale = 1, dpi = 300,width = 14, height=8, path='paper/R/fig')
+ggsave('auc_permutation_negation_1.png', plot = last_plot(), scale = 1, dpi = 300,width = 14, height=8, path='fig')
 
 
 auc_means$measure = factor(auc_means$measure,levels(auc_means$measure)[c(1,4,3,5,2,6,7)])
@@ -492,5 +499,5 @@ ggarrange(p3, p4,
           ncol = 2, nrow = 1,  align = "hv", 
           widths = c(1, 1), heights = c(1,1), labels = c("A", "B"))
 
-ggsave('auc_permutation_negation_2.png', plot = last_plot(), scale = 1, dpi = 300,width = 14, height=8, path='paper/R/fig')
+ggsave('auc_permutation_negation_2.png', plot = last_plot(), scale = 1, dpi = 300,width = 14, height=8, path='fig')
 

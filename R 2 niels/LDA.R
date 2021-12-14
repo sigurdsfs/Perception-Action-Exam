@@ -545,7 +545,7 @@ LDA_test.coord.dist <- function(data, v_lda, b_lda, m_pca, all_data_columns, n_p
   normalized_positions_te_pca <- bind_cols(normalized_positions_te,as.data.frame(predict(m_pca, normalized_positions_te)[,1:n_pca]))
   
   lda_measure_te.df <<- data_frame(
-    lda_measure=c(as.matrix(dplyr::select(normalized_positions_te_pca, starts_with("PC"))) %*% v_lda - b_lda),
+    lda_measure=c(as.matrix(dplyr::select(normalized_positions_te_pca, starts_with("PC"))) %*% v_lda- b_lda),
     Deviation=normalized_positions_te$Deviation,
     Subject = normalized_positions_te$Subject,
     Expected_response = normalized_positions_te$Expected_response,

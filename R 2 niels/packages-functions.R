@@ -2,21 +2,21 @@
 
 library(reshape2)
 library(devtools)
-#library(rocauc)
-library(pROC)
-library(tidyverse)
-library(plyr)
-library(Hmisc)
-library(ggplot2)
+#require(rocauc)
+require(pROC)
+require(tidyverse)
+require(plyr)
+require(Hmisc)
+require(ggplot2)
 library(ellipse)
 library(boot)
 library(reshape)
 library(ggpubr)
 library(GGally)
-library(lme4)
+require(lme4)
 library(MASS) # NB: this will mask dplyr::select
 
-#pacman::p_load(MASS,lme4,GGally,ggpubr, reshape, boot, ellipse, tidyverse, Hmisc, plyr, pROC, devtools, reshape2)
+
 ## palette ####
 cbPalette <- c("#000000", "#199958", "#CC1919", 
                "#00CDCD", "#7E10AF", "#AF7E10", "#1041AF", "#808080")
@@ -47,9 +47,9 @@ estBetaParams <- function(mu, var) {
   return(params = list(alpha = alpha, beta = beta))
 }
 
-#Plots
-#source("R_scripts/functions/plot_measures.R") don't have these!
-#source("R_scripts/functions/plot_single_item.R") don't have these!
+##Plots
+source("plot_measures.R")
+source("plot_single_item.R")
 
 # area under the ROC curve
 auc_roc <- function(data, indices, score, label, n){
@@ -90,7 +90,7 @@ random_classifier <- function(training, test, iterations){
   parameters <- estBetaParams(class1, 0.1)
   #test$random_classifier <- rbeta(length(test$Polarity), parameters$alpha, parameters$beta)
   my <<- rbeta(length(test$Polarity)*iterations, parameters$alpha, parameters$beta)
-  #calibrationTest <<- test
+  calibrationTest <<- test
 }
 
 # Divide data in 10 bins with same proportion of original set of data
@@ -132,5 +132,45 @@ bins_crossvalidation <- function(data, level1, level2 ){
   
   rm(bin1,bin2,bin3,bin4,bin5,bin6,bin7,bin8,bin9,bin10)
   
+}
+
+multiplot <- function(..., plotlist = NULL, cols = 1, layout = NULL, title = NULL, 
+                      fontsize = 14, fontfamily = "Helvetica", fontface = "bold") {
+  require(grid)
+  plots <- c(list(...), plotlist)
+  numPlots = length(plots)
+  if (is.null(layout)) {
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  if (length(title)>0){
+    layout <- rbind(rep(0, ncol(layout)), layout)
+  }
+  if (numPlots==1) {
+    print(plots[[1]])
+  } else {
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), 
+                                               ncol(layout), 
+                                               heights = if (length(title)>0) {unit(c(0.5, rep(5,nrow(layout)-1)), "null")}
+                                               else {unit(c(rep(5, nrow(layout))), "null")})))
+    if(length(title) > 1){
+      ncols <- 1:ncol(layout)
+      for(i in seq(ncols)){
+        grid.text(title[i], 
+                  vp = viewport(layout.pos.row = 1, layout.pos.col = i),
+                  gp = gpar(fontsize = fontsize, fontfamily = fontfamily, fontface = fontface))
+      }
+    } else {
+      grid.text(title, 
+                vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncol(layout)),
+                gp = gpar(fontsize = fontsize, fontfamily = fontfamily, fontface = fontface))
+    }
+    for (i in 1:numPlots) {
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
 }
 

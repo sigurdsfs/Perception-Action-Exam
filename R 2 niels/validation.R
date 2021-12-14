@@ -4,9 +4,9 @@
 
 ## DATA EXTRACTION ####
 getwd()
-calibration_info <- read.csv(file="/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Semester)/Perception And Action EXAM/data_R/calibration_info.csv", header=TRUE, sep=",")
-calibration_data <- read.csv(file="/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Semester)/Perception And Action EXAM/data_R/calibration_data_simple.csv", header=TRUE, sep=",")
-calibration_data_positions <- read.csv(file="/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Semester)/Perception And Action EXAM/data_R/calibration_data_positions.csv", header=TRUE, sep=",")
+calibration_info <- read.csv(file="data_R/calibration_info.csv", header=TRUE, sep=",")
+calibration_data <- read.csv(file="data_R/calibration_data_simple.csv", header=TRUE, sep=",")
+calibration_data_positions <- read.csv(file="data_R/calibration_data_positions.csv", header=TRUE, sep=",")
 
 x <- paste0('x', sprintf("%03d", c(1:101)))
 y <- paste0('y', sprintf("%03d", c(1:101)))
@@ -55,12 +55,12 @@ ggplot(calibration_data_positions_overall.means, aes(x=X.Position.mean, y=Y.Posi
                       breaks=c("0", "0.4", "0.7", "0.9"),
                       labels=c("Straight", "Early (y=0.4)", "Middle (y=0.7)", "Late (y=0.9)")) +
   theme(legend.position='right')
-ggsave('mean-trajectories-validation.png', plot = last_plot(), scale = 1, dpi = 300, width = 6, height = 5,  path='paper/R/fig')
+ggsave('fig/mean-trajectories-validation.png', plot = last_plot(), scale = 1, dpi = 300, width = 6, height = 5)
 
 ## LDA FOR CLASSIFICATION ####
 
 ### Applying the LDA to validation data
-source("R_scripts/calibration/LDA.R")
+source("LDA.R")
 LDA_training.coord.dist(calibration_data)
 save(m_pca, v_lda, b_lda, n_pca, all_data_columns, file="LDA-Full.RData")
 calibration_data <- dplyr::full_join(lda_measure.df, calibration_data, by=c("Subject", "Item.number", "Expected_response"))
@@ -70,25 +70,37 @@ Palette1 <- c("#1470A5", "#DB172A")
 
 ### Figure: Mean and distribution of LDA measure
 
+png(filename = 'fig/lda_distribution_calibration.png',res=300, height = 4, width = 5, units = 'in')
 plot_measure(calibration_data, 'lda_measure_full', 'Decision')
-ggsave('lda_distribution_calibration.png', plot = last_plot(), scale = 1, dpi = 300,width = 7, path='paper/R/fig')
+dev.off()
+
 
 ## OTHER MOUSE TRACKING MEASURES: Distribution and means ####
 ### Max Deviation 
+png(filename = "fig/MD_calibration.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(calibration_data, 'MaxDeviation', 'Decision')
-ggsave('MD_calibration.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+dev.off()
+
 ### MaxLogRatio 
+png(filename = "fig/MaxRatio_calibration.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(calibration_data, 'MaxLogRatio', 'Decision')
-ggsave('MaxRatio_calibration.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+dev.off()
+
+
 ### AUC 
+png(filename = "fig/AUC_calibration.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(calibration_data, 'AUC', 'Decision')
-ggsave('AUC_calibration.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+dev.off()
+
 #### X-coordinate flips
+png(filename = "fig/Xflips_calibration.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(calibration_data, 'X.flips', 'Decision')
-ggsave('Xflips_calibration.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+dev.off()
+
 ### Acceleration component
+png(filename = "fig/AC_calibration.png", res=300, height = 4, width = 5, units = 'in')
 plot_measure(calibration_data, 'Acc.flips', 'Decision')
-ggsave('AC_calibration.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+dev.off()
 
 
 # CLASSIFIER PERFORMANCE ####
@@ -363,7 +375,7 @@ ggarrange(p1, p2,
           widths = c(0.5, 1), heights = c(1,1), common.legend = FALSE, labels = c("A", "B"))
 
 # Figure 6
-ggsave('auc_calibration_1.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+ggsave('auc_calibration_1.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='fig')
 
 
 p3 <- ggplot(data=subset(auc.bins_change, variable %in% c("Original LDA", "Maximal LogRatio", "X-coordinate flips","Maximal Deviation", "AccFlips", "Topline" , "Baseline", "Area Under Trajectory")), aes(x=bins, y=value, group=variable, colour=variable)) +
@@ -388,7 +400,7 @@ ggarrange(p1, p3,
           widths = c(0.5, 1), heights = c(1,1), common.legend = FALSE, labels = c("A", "B"))
 
 #Figure 9
-ggsave('auc_calibration_2.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='paper/R/fig')
+ggsave('auc_calibration_2.png', plot = last_plot(), scale = 1, dpi = 300,width = 10, path='fig')
 
 
 
