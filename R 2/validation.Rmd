@@ -89,6 +89,8 @@ ggplot(calibration_data_positions_overall.means, aes(x=X.Position.mean, y=Y.Posi
 ### Applying the LDA to validation data
 #source("R_scripts/calibration/LDA.R")
 
+write_csv(pca_data_pyton, "PCA_DATA_CALIBRATION.csv")
+
 LDA_training.coord.dist(calibration_data)
 save(m_pca, v_lda, b_lda, n_pca, all_data_columns, file="LDA-Full.RData")
 calibration_data <- dplyr::full_join(lda_measure.df, calibration_data, by=c("Subject", "Item.number", "Expected_response"))
@@ -127,9 +129,9 @@ ggsave('AC_calibration.png', plot = last_plot(), scale = 1, dpi = 300,width = 10
 # CLASSIFIER PERFORMANCE ####
 #### Bins for cross valiation
 calibration_data$id <- 1:nrow(calibration_data)
-bins_crossvalidation(calibration_data,'deviated','straight')
+bins_crossvalidation(calibration_data,'deviated','straight') # Divide the data prepare for CV
 
-#### Data frame to save all the AUCs values
+#### Data frame to save all the AUCs values for different model features. 
 auc.bins <- data.frame(bins = c(1:10),
                        lda.full=c(1:10),
                        lda.vel.acc=c(1:10),
@@ -144,8 +146,8 @@ auc.bins <- data.frame(bins = c(1:10),
                        topline=c(1:10))
 
 # Data frame for iteration of different bins (for baseline)
-iterations = 100
-random_classifier.df <- data.frame(matrix(ncol=iterations, nrow=10))
+iterations = 1000
+random_classifier.df <- data.frame(matrix(ncol=iterations, nrow=10)) #10 bins 10 rows. 
 
 #### Cross-validation for LDA classifier vs. baseline vs. topline
 for (b in 1: length(bins)) {
