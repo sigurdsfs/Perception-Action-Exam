@@ -1,0 +1,61 @@
+---
+title: "sigurd version"
+author: "Sigurd Fyhn Sørensen"
+date: "12/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+pacman::p_load(tidyverse, lme4)
+```
+
+```{r}
+load("/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Semester)/Perception And Action EXAM/data_R/negation_data_processed.RData")
+```
+
+
+```{r}
+
+glmer()
+```
+
+
+## Load data 
+```{r}
+calibration_info <- read.csv(file="/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Semester)/Perception And Action EXAM/data_R/calibration_info.csv", header=TRUE, sep=",")
+calibration_data <- read.csv(file="/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Semester)/Perception And Action EXAM/data_R/calibration_data_simple.csv", header=TRUE, sep=",")
+calibration_data_positions <- read.csv(file="/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Semester)/Perception And Action EXAM/data_R/calibration_data_positions.csv", header=TRUE, sep=",")
+
+```
+
+```{r}
+## SUBJECT and TRIAL EXCLUSION ####
+### Subjects who didn't use mouse
+yes_mouse <- subset(calibration_info, grepl('mouse',calibration_info$Clicker, ignore.case=TRUE)) #Check if people used mouse
+calibration_info <- subset(calibration_info, (Subject %in% yes_mouse$Subject))
+calibration_data <- subset(calibration_data, (Subject %in% yes_mouse$Subject))
+calibration_data_positions <- subset(calibration_data_positions, (Subject %in% yes_mouse$Subject))
+```
+
+```{r}
+#Subset for Accuracy == TRUE.
+calibration_data <- subset(calibration_data, Accuracy==TRUE)
+calibration_data_positions <- subset(calibration_data_positions, Accuracy==TRUE)
+
+#TUrn Subject into factor
+calibration_data$Subject <- factor(calibration_data$Subject)
+calibration_data_positions$Subject <- factor(calibration_data_positions$Subject)
+```
+
+```{r}
+calibration_data_positions %>% 
+  group_by(PointChange, Time.Step, Subject) %>% 
+  summarise(X_pos_mean = mean(X.Position, na.rm = T))
+
+```
+
