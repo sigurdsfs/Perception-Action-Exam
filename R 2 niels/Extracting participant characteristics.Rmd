@@ -1,0 +1,73 @@
+---
+title: "Extracting participant characteristics"
+author: "Niels Krogsgaard"
+date: "12/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+pacman::p_load(tidyverse, readbulk)
+```
+
+```{r}
+df_all <- read_bulk("../Our_data")
+```
+
+
+```{r}
+2
+```
+
+```{r}
+data.frame(df_all$subject_nr, df_all$gender, df_all$age) %>%
+  unique() %>% 
+  group_by(df_all.gender) %>% 
+  summarise(count = n())
+```
+
+
+```{r}
+df_all$age <- as.numeric(df_all$age)
+
+#subject_nr 99 (aka. Jonathan) wrote his age as being toogtyve instead of 22
+df_all_no99 <- df_all %>% 
+  filter(subject_nr != '99')
+
+subject_means <- df_all_no99 %>% 
+  group_by(subject_nr) %>% 
+  summarise(mean_age = mean(age))
+```
+
+```{r}
+mean(subject_means$mean_age)
+```
+
+```{r}
+range(subject_means$mean_age)
+```
+
+```{r}
+subject_accuracy <- df_all %>% 
+  filter(practice != 'yes') %>% 
+  group_by(subject_nr) %>% 
+  summarise(subject_accuracy = sum(correct)/n(), n_correct = sum(correct), n_total = n())
+```
+
+
+```{r}
+mean(subject_accuracy$subject_accuracy)
+```
+
+```{r}
+df_all %>% 
+  filter(practice != 'yes') %>% 
+  group_by(subject_nr) %>% 
+  summarise(subject_accuracy = sum(correct)/n(), n_corret = sum(correct), n_total = n())
+```
+
+
+
