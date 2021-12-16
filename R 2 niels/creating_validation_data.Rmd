@@ -1,0 +1,149 @@
+---
+title: "Creating validation data"
+author: "Niels Krogsgaard"
+date: "12/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+```
+
+```{r}
+## DATA EXTRACTION ####
+getwd()
+calibration_info <- read.csv(file="../Data/calibration_info.csv", header=TRUE, sep=",")
+calibration_data <- read.csv(file="../Data/calibration_data_simple.csv", header=TRUE, sep=",")
+calibration_data_positions <- read.csv(file="../Data/calibration_data_positions.csv", header=TRUE, sep=",")
+
+x <- paste0('x', sprintf("%03d", c(1:101)))
+y <- paste0('y', sprintf("%03d", c(1:101)))
+
+## SUBJECT and TRIAL EXCLUSION ####
+### Subjects who didn't use mouse
+yes_mouse <- subset(calibration_info, grepl('mouse',calibration_info$Clicker, ignore.case=TRUE))
+calibration_info <- subset(calibration_info, (Subject %in% yes_mouse$Subject))
+calibration_data <- subset(calibration_data, (Subject %in% yes_mouse$Subject))
+calibration_data_positions <- subset(calibration_data_positions, (Subject %in% yes_mouse$Subject))
+
+calibration_data <- subset(calibration_data, Accuracy==TRUE)
+calibration_data_positions <- subset(calibration_data_positions, Accuracy==TRUE)
+
+calibration_data$Subject <- factor(calibration_data$Subject)
+calibration_data_positions$Subject <- factor(calibration_data_positions$Subject)
+
+## LDA FOR CLASSIFICATION ####
+
+#Coordinates, velocity and acceleration (based on gradients/distance)
+just_pca <- function(calibration_data){
+  ### ORDERING DATA
+  x <- paste0('x', sprintf("%03d", c(1:101)))
+  y <- paste0('y', sprintf("%03d", c(1:101)))
+  v <- paste0('v', sprintf("%03d", c(1:101)))
+  a <- paste0('a', sprintf("%03d", c(1:101)))
+  
+  # Each x and y coordenate into two columns (101 coordenates per trial) 
+  normalized_positions = calibration_data %>%
+    dplyr::select(Subject, Item.number, Polarity, Expected_response, Normalized.positions.X,Normalized.positions.Y, Velocity, Acceleration) %>%
+    separate(Normalized.positions.Y, into= y, sep = ",") %>%
+    separate(Normalized.positions.X, into= x, sep = ",") %>%
+    separate(Velocity, into= v, sep = ",") %>%
+    separate(Acceleration, into= a, sep = ",")
+  
+  normalized_positions[y] <- sapply(normalized_positions[y],as.numeric)
+  normalized_positions[x] <- sapply(normalized_positions[x],as.numeric)
+  normalized_positions[v] <- sapply(normalized_positions[v],as.numeric)
+  normalized_positions[a] <- sapply(normalized_positions[a],as.numeric)
+  
+  # Taking the negative of false items, to have everything in the same scale
+  normalized_positions_false = normalized_positions%>%
+    filter(Expected_response=='blue')%>%
+    dplyr::mutate_at(vars(starts_with('x')), funs('-'))
+  normalized_positions_true = filter(normalized_positions, Expected_response=='red')
+  normalized_positions = bind_rows(normalized_positions_false,normalized_positions_true)
+  rm(normalized_positions_true, normalized_positions_false)
+  
+  #last arrangements
+  normalized_positions$Subject <- factor(normalized_positions$Subject)
+  normalized_positions$Polarity <- factor(normalized_positions$Polarity)
+  normalized_positions$Expected_response <- factor(normalized_positions$Expected_response)
+  normalized_positions$Deviation <- ifelse(normalized_positions$Polarity == "deviated",
+                                           "NonCentral", "Central")
+  
+  
+  normalized_positions_tr <- normalized_positions
+
+  # Remove dimensions that are constant within groups
+  constant_columns_ctl <- normalized_positions_tr %>%
+    filter(Deviation == "Central") %>%
+    dplyr::select(starts_with("x"), starts_with("y"), starts_with('v'), starts_with('a')) %>%
+    find_constant
+  constant_columns_nctl <- normalized_positions_tr %>%
+    filter(Deviation == "NonCentral") %>%
+    dplyr::select(starts_with("x"), starts_with("y"), starts_with('v'),starts_with('a')) %>%
+    find_constant
+  constant_columns <- c(constant_columns_ctl, constant_columns_nctl)
+  
+  normalized_positions_tr <- dplyr::select(normalized_positions_tr,
+                                           -one_of(constant_columns))
+  
+  #uncorrelated_columns <- find_uncorrelated(normalized_positions_tr,
+  #                                          all_data_columns,
+  #                                          cutoff=0.95)
+  
+  all_data_columns <<- names(dplyr::select(normalized_positions_tr,
+                                          starts_with("x"),
+                                          starts_with("y"),
+                                          starts_with("v"),
+                                          starts_with("a")))
+  
+  normalized_positions_all <- normalized_positions_tr %>%
+    dplyr::select(one_of(all_data_columns))
+  
+  ##PCA in training set
+  m_pca <<- normalized_positions_tr %>%
+    dplyr::select(one_of(all_data_columns)) %>%
+    as.matrix %>%
+    prcomp(center = TRUE, scale = TRUE)
+  
+  #normalized_positions_tr_pca <- bind_cols(normalized_positions_tr, as.data.frame(m_pca$x[,1:ncol(m_pca$x)]))
+  
+  normalized_positions_tr_pca <- as.data.frame(m_pca$x[,1:ncol(m_pca$x)])
+  
+  return(list(normalized_positions_tr_pca, normalized_positions_all))
+}
+  ### LDA
+
+a <- just_pca(calibration_data)
+write_csv(a[[1]], "just_pca_calibration.csv")
+write_csv(a[[2]], "normalized_positions_all.csv")
+```
+
+
+```{r}
+### Applying the LDA to validation data
+source("LDA.R")
+LDA_training.coord.dist(calibration_data)
+save(m_pca, v_lda, b_lda, n_pca, all_data_columns, file="LDA-Full.RData")
+calibration_data <- dplyr::full_join(lda_measure.df, calibration_data, by=c("Subject", "Item.number", "Expected_response"))
+calibration_data_positions <- dplyr::full_join(lda_measure.df, calibration_data_positions, by=c("Subject", "Item.number", "Expected_response"))
+```
+
+```{r}
+Palette1 <- c("#1470A5", "#DB172A")
+
+### Figure: Mean and distribution of LDA measure
+
+png(filename = 'fig/lda_distribution_calibration.png',res=300, height = 4, width = 5, units = 'in')
+plot_measure(calibration_data, 'lda_measure_full', 'Decision')
+dev.off()
+```
+
+```{r}
+
+```
+

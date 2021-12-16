@@ -16,9 +16,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## DATA EXTRACTION ####
 getwd()
-negation_info <- read.csv(file="data_R/negation_info.csv", header=TRUE, sep=",")
-negation_data <- read.csv(file="data_R/negation_data_simple.csv", header=TRUE, sep=",")
-negation_data_positions <- read.csv(file="data_R/negation_data_positions.csv", header=TRUE, sep=",")
+negation_info <- read.csv(file="../Data/negation_info.csv", header=TRUE, sep=",")
+negation_data <- read.csv(file="../Data/negation_data_simple.csv", header=TRUE, sep=",")
+negation_data_positions <- read.csv(file="../Data/negation_data_positions.csv", header=TRUE, sep=",")
 
 x <- paste0('x', sprintf("%03d", c(1:101)))
 y <- paste0('y', sprintf("%03d", c(1:101)))
@@ -98,25 +98,13 @@ anova(control_model1.lda, m0.response.lda)
 control_model2.lda <- lmer(X.flips ~ Polarity*Expected_response + (1+Polarity*Expected_response|Subject), data = mydata, REML=FALSE)
 m0.interaction.lda <- lmer(X.flips~ Polarity+Expected_response+ (1+Polarity*Expected_response|Subject), data = mydata, REML=FALSE) #the value of intercept is not exactly the same as the one in my aggregate function, why?
 anova(control_model2.lda, m0.interaction.lda)
+```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```{r}
 ##CLASSIFIER PERFORMANCE ####
 ### Full LDA
-load('LDA-Full.RData')
+load('../Data/LDA-Full.RData')
 source("norm_positions_LDA.R")
 
 normalized_positions.new <- normalized_positions %>%
@@ -159,7 +147,7 @@ negation_data_positions <- dplyr::full_join(lda_measure.new.df, negation_data_po
 Palette1 <- c("#DB172A", "#1470A5")
 negation_data_true <- filter(negation_data, Response=='true')
 
-write_csv(negation_true, "negation_true.csv")
+write_csv(negation_data_true, "negation_true.csv")
 ```
 
 
