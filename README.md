@@ -3,7 +3,8 @@
 	1) MOUSE-TRACKING. 
 		a. Mouse-tracking as a tool
 		b. What is mouse-tracking used for in perception and action. 
-		c. (MAYBE) Issues with current mouse-tracking analysis, things improve. 
+		c. (MAYBE) Issues with current mouse-tracking analysis, things improve.
+		d. Multiple t.test & linear regression on features such as MD (Maximal deviation), AUC (between Trajectory and optimal curce), X.flips etc.   
 		
 	2) Mouse-tracking a windows into decision making… 
 		a. What were their goals. 
