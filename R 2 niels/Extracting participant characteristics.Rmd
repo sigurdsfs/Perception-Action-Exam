@@ -66,8 +66,17 @@ mean(subject_accuracy$subject_accuracy)
 df_all %>% 
   filter(practice != 'yes') %>% 
   group_by(subject_nr) %>% 
-  summarise(subject_accuracy = sum(correct)/n(), n_corret = sum(correct), n_total = n())
+  summarise(subject_accuracy = sum(correct)/n(), n_correct = sum(correct), n_total = n())
 ```
 
+```{r}
+df_all %>% 
+  filter(practice != 'yes') %>% 
+  ggplot(aes(x = response_time)) + 
+  geom_histogram()
+```
+```{r}
+filter(df_all, response_time > 2000)
+```
 
 
