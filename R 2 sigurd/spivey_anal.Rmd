@@ -37,7 +37,7 @@ write_csv(spivey_df_short, "mouse_spivey_short.csv")
 ```{r}
 #Subset for Accuracy == TRUE.
 spivey_df_short_correct <- subset(spivey_df_short, correct == 1)
-spiey_df_shot_correct <- subset(spivey_df_short_correct, practice == "no")
+spivey_df_short_correct <- subset(spivey_df_short_correct, practice == "no")
 
 #TUrn Subject into factor
 spivey_df_short_correct$subject_nr <- factor(spivey_df_short_correct$subject_nr)
@@ -119,7 +119,7 @@ m <- mt_align(
   use = "tn_trajectories",
   save_as = "tn_align_trajec",
   dimensions = c("xpos", "ypos"),
-  coordinates = "isotropic",
+  coordinates = "norm",
   align_start = TRUE ,
   align_end = TRUE,
   align_side = "no",
@@ -166,7 +166,6 @@ m <- mt_measures(
   use = 'tn_trajectories')
 
 
-
 #### FIX ### LOOK AT WITH NIELS.
 #derivs calculated using tn (time normalized) (we did not space normalize but maybe that is ok)
 m <- mt_derivatives(
@@ -193,6 +192,13 @@ toMatch2 <- c("z_")
 trajecs_ok <- trajec[, grepl(paste(toMatch2, collapse = "|"), names(trajec))]
 
 spivey_df_data <- cbind(trajecs_ok, derivs, m$data)
+```
+
+```{r}
+# USe this data for Using MAD, MD (Maximum Deviation), AUC (Area under the curve for optimal straight line).
+m$measures
+
+roc()
 ```
 
 
@@ -339,7 +345,9 @@ final_PCA_PREDICT <- normalized_positions.new.spivey %>%
   mutate(Item.number = as.factor(Item.number)) %>% 
   mutate(Polarity = as.factor(Polarity)) %>% 
   mutate(Response = as.factor(Response))
-write_csv(final_PCA_PREDICT, "spivey_data_for_pca.csv")
+
+
+
 
 
 #Flip X
@@ -350,6 +358,17 @@ final_PCA_PREDICT[X_data_columns_spivey] <- final_PCA_PREDICT[X_data_columns_spi
 
 #Numeric
 final_PCA_PREDICT[all_data_columns] <- sapply(final_PCA_PREDICT[all_data_columns],as.numeric)
+
+
+m$measures
+
+#CSV FILE FOR 
+csv_file_for_python = cbind(final_PCA_PREDICT, m$measures)
+#write 
+write_csv(final_PCA_PREDICT, "spivey_data_for_pca.csv")
+write_csv(csv_file_for_python, "spivey_data_for_python.csv")
+
+
 
 #TIME TO PREDICT
 predict(m_pca, final_PCA_PREDICT)
