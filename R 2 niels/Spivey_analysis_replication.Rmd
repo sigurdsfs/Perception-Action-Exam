@@ -13,10 +13,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Packages
 ```{r}
-pacman::p_load(tidyverse, lme4, readbulk)
+pacman::p_load(readbulk)
 pacman::p_load(MASS,lme4,GGally,ggpubr, reshape, boot)
-pacman::p_load(ellipse, tidyverse, Hmisc, plyr)
+pacman::p_load(ellipse, tidyverse, Hmisc)
 pacman::p_load(pROC, devtools, reshape2, mousetrap)
+pacman::p_load(lmerTest)
 ```
 
 
@@ -30,136 +31,266 @@ spivey_df <- read_bulk("../Our_data/", extension = "csv")
 spivey_df_short <- spivey_df %>% 
   dplyr::select(left_stimuli_1, right_stimuli_1, timestamps_mouse, sound, practice, timestamps_mouse, xpos_mouse, ypos_mouse, response, response_time, count_trial_sequence, correct_response, correct, subject_nr, trial_type, live_row )
 
-write_csv(spivey_df_short, "mouse_spivey_short.csv")
+#write_csv(spivey_df_short, "mouse_spivey_short.csv")
+
+spivey_df_short <- spivey_df_short %>% 
+  filter(practice != "yes")
+```
+
+
+```{r}
+t_test_accuracy <- spivey_df_short %>% 
+  group_by(subject_nr, trial_type) %>% 
+  dplyr::summarise(subject_accuracy = 1-sum(correct)/n())
+```
+```{r}
+t_test_accuracy_wide <- pivot_wider(t_test_accuracy, names_from = trial_type, values_from = subject_accuracy)
+t_test_accuracy %>% 
+  group_by(trial_type) %>% 
+  dplyr::summarise(mean = mean(subject_accuracy))
+```
+
+
+```{r}
+t.test(t_test_accuracy_wide$cohort, t_test_accuracy_wide$control, paired = TRUE)
 
 ```
+```{r}
+#model_accuracy <- lmerTest::lmer(correct~trial_type + (1|subject_nr), data = spivey_df_short)
+#summary(model_accuracy)
+```
+
+```{r}
+spivey_df_filter <- spivey_df_short %>% 
+  filter(correct == 1)
+```
+
+```{r}
+t_test_response_time <- spivey_df_filter %>% 
+  group_by(subject_nr, trial_type) %>% 
+  dplyr::summarise(mean_response_time = mean(response_time))
+
+t_test_response_time_wide <- pivot_wider(t_test_response_time, names_from = trial_type, values_from = mean_response_time)
+
+t.test(t_test_response_time_wide$control, t_test_response_time_wide$cohort, paired = TRUE, alternative = "two.sided")
+```
+```{r}
+mean(t_test_response_time_wide$cohort)
+```
+
+```{r}
+mean(t_test_response_time_wide$control)
+```
+
+
+```{r}
+model_response_time <- lmerTest::lmer(response_time~trial_type + (1|subject_nr), data = spivey_df_filter)
+summary(model_response_time)
+```
+
+
+
 
 
 ```{r}
 #Subset for Accuracy == TRUE.
 spivey_df_short_correct <- subset(spivey_df_short, correct == 1)
-spiey_df_shot_correct <- subset(spivey_df_short_correct, practice == "no")
+spivey_df_shot_correct <- subset(spivey_df_short_correct, practice == "no")
 
 #TUrn Subject into factor
 spivey_df_short_correct$subject_nr <- factor(spivey_df_short_correct$subject_nr)
 ```
 
-
-```{r}
-print(c(nrow(spivey_df_short_correct)/nrow(spivey_df_short)*100, "% correct"))
-```
-
 # Mousetrap
 ```{r}
+#creating mouse_trap object, extracting initiation times and creating a dataframe with only the relevant information
 m <- mt_import_mousetrap(spivey_df_short_correct)
+
+m_measures <- mt_measures(m)
+
+data_initiation_time <- data.frame(subject_nr = spivey_df_short_correct$subject_nr, trial_type = spivey_df_short_correct$trial_type, initiation_time = m_measures$measures$initiation_time)
 ```
 
 ```{r}
-mt_plot(data = m , use = "trajectories", color = "trial_type")
+head(data_initiation_time)
+```
+
+
+```{r}
+t_test_initiation_time <- data_initiation_time %>% 
+  group_by(subject_nr, trial_type) %>% 
+  dplyr::summarise(mean_initiation_time = mean(initiation_time))
+
+t_test_initiation_time_wide <- pivot_wider(t_test_initiation_time, names_from = trial_type, values_from = mean_initiation_time)
+
+t.test(t_test_initiation_time_wide$control, t_test_initiation_time_wide$cohort, paired = TRUE, alternative = "two.sided")
 ```
 ```{r}
+mean(t_test_initiation_time_wide$control)
+```
+```{r}
+mean(t_test_initiation_time_wide$cohort)
+```
+
+
+```{r}
+model_initiation_time <- lmerTest::lmer(initiation_time~trial_type + (1|subject_nr), data = data_initiation_time)
+summary(model_initiation_time)
+```
+
+```{r}
+data_duration_time <- data.frame(subject_nr = spivey_df_short_correct$subject_nr, trial_type = spivey_df_short_correct$trial_type, duration_time = spivey_df_short_correct$response_time - m_measures$measures$initiation_time, response_time = spivey_df_short_correct$response_time, initiation_time = m_measures$measures$initiation_time)
+```
+
+```{r}
+head(data_duration_time)
+```
+```{r}
+t_test_duration_time <- data_duration_time %>% 
+  group_by(subject_nr, trial_type) %>% 
+  dplyr::summarise(mean_duration_time = mean(duration_time))
+
+t_test_duration_time_wide <- pivot_wider(t_test_duration_time, names_from = trial_type, values_from = mean_duration_time)
+
+t.test(t_test_duration_time_wide$control, t_test_duration_time_wide$cohort, paired = TRUE, alternative = "two.sided")
+```
+
+```{r}
+mean(t_test_duration_time_wide$control)
+```
+```{r}
+mean(t_test_duration_time_wide$cohort)
+```
+
+
+```{r}
+model_duration_time <- lmerTest::lmer(duration_time~trial_type + (1|subject_nr), data = data_duration_time)
+summary(model_duration_time)
+```
+
+
+```{r}
+m <- mt_import_mousetrap(spivey_df_short_correct)
+
 #remap
-m <- mt_remap_symmetric(
-  m, 
-  use = 'trajectories',
-  remap_xpos = "left"
-  )
+m <- mt_remap_symmetric(m, use = 'trajectories', remap_xpos = "left", remap_ypos = "up")
 
-mt_plot(
-  m, 
-  use = 'trajectories',
-  color = 'trial_type'
-  )
-```
-```{r}
-# plot with timestamps
-mt_plot(
-  m, 
-  x = 'timestamps', # modifying the x-axis to plot timestamps
-  y = 'xpos',       # modifying the y-axis to plot the xpos
-  use = 'trajectories',
-  color = 'trial_type' 
-)
-```
-```{r}
 m <- mt_exclude_initiation(m)
-mt_plot(
-  m, 
-  x = 'timestamps',
-  y = 'xpos',
-  use = 'trajectories',
-  color = 'trial_type' 
-)
-```
-```{r}
-m <- mt_time_normalize(m, nsteps = 101) #creates tn_trajectories
+m <- mt_time_normalize(m_exclude_initiation, nsteps = 101) #creates tn_trajectories
 
-
-as.data.frame(m$tn_trajectories)
-mt_plot(
-  m, 
-  use = 'tn_trajectories',
-  color = 'trial_type'
-)
-
-mt_plot(
-  m, 
-  x = 'timestamps',
-  y = 'xpos',
-  use = 'tn_trajectories',
-  color = 'trial_type' 
-)
-```
-```{r}
 #Final prep of data.
-
 #Make the end and start point together. 
-m <- mt_align(
-  m,
-  use = "tn_trajectories",
-  save_as = "tn_align_trajec",
-  dimensions = c("xpos", "ypos"),
-  coordinates = "isotropic",
-  align_start = TRUE ,
-  align_end = TRUE,
-  align_side = "no",
-  verbose = FALSE
-)
+m <- mt_align(m, use = "tn_trajectories", save_as = "tn_align_trajec", dimensions = c("xpos", "ypos"), coordinates = "isotropic", align_start = TRUE , align_end = TRUE, align_side = "no", verbose = FALSE)
+
+m <- mt_scale_trajectories(m, use = "tn_align_trajec", save_as = "final_trajec", c("xpos", "ypos"), center = TRUE, scale = TRUE, within_trajectory = FALSE, prefix = "z_", transform = NULL)
+
+m <- mt_measures(m, use = 'tn_trajectories')
+```
+
+```{r}
+'''Different methods have been suggested for assessing the bimodality of mouse-tracking measure
+distributions, each of which has advantages and disadvantages (see Freeman & Dale, 2013).
+
+Hehman et al. (2015) focus on two specific methods (bimodality coefficient and Hartigan’s dip
+statistic) which are implemented here.
+
+If methods include BC, the bimodality coefficient is calculated using the bimodality_coefficient
+function in this package. According to Freeman and Ambady (2010), a distribution is considered
+bimodal if BC > 0.555.
+
+Note that MouseTracker (Freeman & Ambady, 2010) standardizes variables within each subject
+before computing the BC. This is also possible here using mt_standardize (see Examples).
+
+If methods include HDS, Hartigan’s dip statistic is calculated using the dip.test function of the
+diptest package. The corresponding p value (computed via linear interpolation) is returned.
+
+If methods include HDS_sim, Hartigan’s dip statistic is calculated using the dip.test function with
+the additional argument simulate.p.values=TRUE. In this case, the p value is computed from a
+Monte Carlo simulation of a uniform distribution with B (default: 2000) replicates.'''
+```
 
 
-#Standardize trajectories following Z-distirbution 
-m <- mt_scale_trajectories(
-  m,
-  use = "tn_align_trajec",
-  save_as = "final_trajec",
-  c("xpos", "ypos"),
-  center = TRUE,
-  scale = TRUE,
-  within_trajectory = FALSE,
-  prefix = "z_",
-  transform = NULL
-)
 
+```{r}
+#for "degree of curvature" Spivey standardises based on only subject_nr
+#I do not calculate "degree of curvature" but use "average deviation from direct path" instead
 
+#mt_check_bimodality(m, use_variables=c("MAD", "AD"), methods = c("BC", "HDS"), grouping_variables="trial_type")
+#mt_example <- mt_standardize(m, use_variables=c("MAD", "AD"), within="subject_nr")
+
+m_standardised_subject_nr <- mt_standardize(m,use_variables=c("AD"), within=c("subject_nr"), prefix="z_")
+mt_check_bimodality(m_standardised_subject_nr, use_variables=c("z_AD"), methods = c("BC"), grouping_variables="trial_type")
 ```
 
 
 ```{r}
-mt_plot_aggregate(
-  m, 
-  use = 'tn_align_trajec',
-  color = 'trial_type'
-) + 
-  labs(
-    title = 'Aggregated time-normalized mouse trajectories')
+#distributions of average deviation
+data.frame(z_AD = m_standardised_subject_nr$measures$z_AD, trial_type = spivey_df_short_correct$trial_type) %>% 
+  ggplot(aes(x = z_AD, fill = trial_type)) +
+  geom_histogram(alpha = 0.5, position = "identity")
+```
+```{r}
+df_zAD <- data.frame(z_AD = m_standardised_subject_nr$measures$z_AD, trial_type = spivey_df_short_correct$trial_type) 
+
+df_zAD %>% 
+  group_by(trial_type) %>%
+  dplyr::summarise(mean(z_AD), variance = var(z_AD))
 ```
 
 ```{r}
-#Measures calculated using tn (time normalized and space normalized)
-m <- mt_measures(
-  m,
-  use = 'tn_trajectories')
+#if Spivey actually just means AUC when talking about "degree of curvature" then the following could be used
+m_standardised_subject_nr <- mt_standardize(m,use_variables=c("AUC"), within=c("subject_nr"), prefix="z_")
+mt_check_bimodality(m_standardised_subject_nr, use_variables=c("z_AUC"), methods = c("BC"), grouping_variables="trial_type")
+```
 
+```{r}
+df_zAUC <- data.frame(z_AUC = m_standardised_subject_nr$measures$z_AUC, trial_type = spivey_df_short_correct$trial_type) 
+
+df_zAUC %>% 
+  group_by(trial_type) %>%
+  dplyr::summarise(mean = mean(z_AUC), variance = var(z_AUC))
+```
+
+
+```{r}
+#for "area under trajectory" Spivey standardises based on subject_nr and trial_type
+
+#mt_check_bimodality(m, use_variables=c("MAD", "AD"), methods = c("BC", "HDS"), grouping_variables="trial_type")
+#mt_example <- mt_standardize(m, use_variables=c("MAD", "AD"), within="subject_nr")
+
+m_standardised_subject_nr <- mt_standardize(m,use_variables=c("AUC"), within=c("subject_nr", "trial_type"), prefix="z_")
+
+#if "degree of curvatur" actually just is "area under the curve" then the following would be the bimodality coefficient
+mt_check_bimodality(m_standardised_subject_nr, use_variables=c("z_AUC"), methods = c("BC"), grouping_variables="trial_type")
+```
+
+```{r}
+df_zAUC <- data.frame(z_AUC = m_standardised_subject_nr$measures$z_AUC, trial_type = spivey_df_short_correct$trial_type) 
+
+df_zAUC %>% 
+  group_by(trial_type) %>%
+  dplyr::summarise(mean = mean(z_AUC), variance = var(z_AUC))
+
+```
+```{r}
+df_zAUC%>% 
+  ggplot(aes(x = z_AUC, fill = trial_type)) +
+  geom_histogram(alpha = 0.5, position = "identity")
+```
+
+
+```{r}
+ks.test(filter(df_zAUC, trial_type == "control")$z_AUC, filter(df_zAUC, trial_type == "cohort")$z_AUC)
+```
+
+```{r}
+
+```
+
+
+
+
+```{r}
 
 
 #### FIX ### LOOK AT WITH NIELS.
