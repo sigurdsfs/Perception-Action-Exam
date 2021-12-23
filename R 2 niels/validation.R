@@ -4,9 +4,9 @@
 
 ## DATA EXTRACTION ####
 getwd()
-calibration_info <- read.csv(file="data_R/calibration_info.csv", header=TRUE, sep=",")
-calibration_data <- read.csv(file="data_R/calibration_data_simple.csv", header=TRUE, sep=",")
-calibration_data_positions <- read.csv(file="data_R/calibration_data_positions.csv", header=TRUE, sep=",")
+calibration_info <- read.csv(file="../Data/calibration_info.csv", header=TRUE, sep=",")
+calibration_data <- read.csv(file="../Data/calibration_data_simple.csv", header=TRUE, sep=",")
+calibration_data_positions <- read.csv(file="../Data/calibration_data_positions.csv", header=TRUE, sep=",")
 
 x <- paste0('x', sprintf("%03d", c(1:101)))
 y <- paste0('y', sprintf("%03d", c(1:101)))

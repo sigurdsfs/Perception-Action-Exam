@@ -1,0 +1,272 @@
+---
+title: "negation_try_out"
+author: "Niels Krogsgaard"
+date: "12/21/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+######################### NEGATION EXPERIMENT - ANALYSES ON SENTENCE VERIFICATION  ####################
+###################################################################################################
+
+## DATA EXTRACTION ####
+getwd()
+negation_info <- read.csv(file="../Data/negation_info.csv", header=TRUE, sep=",")
+negation_data <- read.csv(file="../Data/negation_data_simple.csv", header=TRUE, sep=",")
+negation_data_positions <- read.csv(file="../Data/negation_data_positions.csv", header=TRUE, sep=",")
+
+x <- paste0('x', sprintf("%03d", c(1:101)))
+y <- paste0('y', sprintf("%03d", c(1:101)))
+
+
+## SUBJECT and TRIAL EXCLUSION ####
+###  Excluding not natives English speakers
+natives <- subset(negation_info, grepl('en',negation_info$Language, ignore.case=TRUE))
+not_natives <- subset(negation_info, !(Subject %in% natives$Subject))
+negation_info<- subset(negation_info, !(Subject %in% not_natives$Subject))
+negation_data <- subset(negation_data, !(Subject %in% not_natives$Subject))
+negation_data_positions <- subset(negation_data_positions, !(Subject %in% not_natives$Subject))
+rm(natives, not_natives)
+
+### Excluding unaccurate trials
+non_accurate_data <- subset (negation_data, Accuracy==FALSE)
+print('percentage of innaccurate trials:')
+print(nrow(non_accurate_data)/nrow(negation_data))
+negation_data <- subset(negation_data, Accuracy==TRUE)
+negation_data_positions <- subset(negation_data_positions, Accuracy==TRUE)
+
+## OVERALL PERFORMANCE ####
+normalized_positions.means.subject <- ddply(negation_data_positions, c("Polarity", "Time.Step", "Expected_response", "Subject"),
+                                            function(negation_data_positions)c(X.Position.mean=mean(negation_data_positions$X.Position, na.rm=T), 
+                                                                                 Y.Position.mean=mean(negation_data_positions$Y.Position, na.rm=T)))
+
+normalized_positions.means.traj <- ddply(normalized_positions.means.subject, c("Polarity", "Time.Step", "Expected_response"),
+                                         function(normalized_positions.means.subject)c(X.Position.mean=mean(normalized_positions.means.subject$X.Position.mean, na.rm=T), 
+                                                                                       X.Position.se=se(normalized_positions.means.subject$X.Position.mean, na.rm=T),
+                                                                                       Y.Position.mean=mean(normalized_positions.means.subject$Y.Position.mean, na.rm=T), 
+                                                                                       Y.Position.se=se(normalized_positions.means.subject$Y.Position.mean, na.rm=T)))
+
+ggplot(normalized_positions.means.traj, aes(x=X.Position.mean, y=Y.Position.mean, color=Polarity, group=Polarity)) +
+  geom_point(alpha=.5) + 
+  ggtitle('') +
+  xlab('X Coordinate') +
+  ylab('Y Coordinate') +
+  geom_errorbarh(aes(xmin=X.Position.mean-X.Position.se, xmax=X.Position.mean+X.Position.se), alpha=.4) + 
+  theme_minimal()+
+  expand_limits(x=c(-1.5,1.5)) + 
+  scale_colour_manual(values=c("#DB172A", "#1470A5"), 
+                      name="Polarity",
+                      breaks=c("N", "P"),
+                      labels=c("Negative", "Positive"))+ 
+  facet_grid(.~Expected_response) 
+
+ggsave('negation-data-mean-trajectory.png', plot = last_plot(), scale = 1, dpi = 300, path='fig', width = 7, height = 5)
+
+## Dale and Duran Replication ####
+### Analysis on X-coordinates flips
+mydata <- negation_data
+mydata$Expected_response <- factor(mydata$Expected_response)
+mydata$Polarity <- factor(mydata$Polarity)
+contrasts(mydata$Expected_response) <- c(-0.5, 0.5)
+contrasts(mydata$Polarity) <- c(0.5, -0.5)
+mydata$Interaction<-factor(contrasts(mydata$Polarity)[mydata$Polarity]*
+                             contrasts(mydata$Expected_response)[mydata$Expected_response]) 
+### Mean values
+xflips.means.subj <- ddply(mydata, c("Polarity", "Expected_response", "Subject"),
+                           function(mydata)c(mean=mean(mydata$X.flips, na.rm=T)))
+
+xflips.means <- ddply(xflips.means.subj, c("Polarity", "Expected_response"),
+                      function(xflips.means.subj)c(mean=mean(xflips.means.subj$mean, na.rm=T), se = se(xflips.means.subj$mean)))
+
+### Main effects
+control_model1.lda <- lmer(X.flips ~ Polarity + Expected_response + Interaction + (1+Polarity*Expected_response|Subject), data = mydata, REML=FALSE)
+
+#Main Effect: Polarity (Affirmative vs. Negative)
+m0.sentence.lda <- lmer(X.flips ~ Expected_response  +Interaction+ (1+Polarity*Expected_response|Subject), data = mydata, REML=FALSE) #the value of intercept is not exactly the same as the one in my aggregate function, why?
+anova(control_model1.lda, m0.sentence.lda)
+
+#Main Effect :Expected_response (True vs. False)
+m0.response.lda <- lmer(X.flips ~ Polarity  + Interaction+ (1+Polarity*Expected_response|Subject), data = mydata, REML=FALSE) #the value of intercept is not exactly the same as the one in my aggregate function, why?
+anova(control_model1.lda, m0.response.lda)
+
+### Effect of Interaction
+control_model2.lda <- lmer(X.flips ~ Polarity*Expected_response + (1+Polarity*Expected_response|Subject), data = mydata, REML=FALSE)
+m0.interaction.lda <- lmer(X.flips~ Polarity+Expected_response+ (1+Polarity*Expected_response|Subject), data = mydata, REML=FALSE) #the value of intercept is not exactly the same as the one in my aggregate function, why?
+anova(control_model2.lda, m0.interaction.lda)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##CLASSIFIER PERFORMANCE ####
+### Full LDA
+load('LDA-Full.RData')
+source("norm_positions_LDA.R")
+
+normalized_positions.new <- normalized_positions %>%
+  dplyr::select(Subject, Item.number, Polarity, Response, one_of(all_data_columns))
+normalized_positions.new_pca <- bind_cols(normalized_positions.new,
+                                          as.data.frame(predict(m_pca, normalized_positions.new)[,1:n_pca]))
+lda_measure.new.df <- data_frame(
+  lda_measure=c(as.matrix(dplyr::select(normalized_positions.new_pca, starts_with("PC"))) %*% v_lda- b_lda),
+  Subject = normalized_positions.new_pca$Subject, 
+  Item.number = normalized_positions.new_pca$Item.number, 
+  Polarity = normalized_positions.new_pca$Polarity, 
+  Response = normalized_positions.new_pca$Response)
+
+##Including the relevant lda_measure in the data
+negation_data$Subject <- factor(negation_data$Subject)
+negation_data$Response <- factor(negation_data$Response)
+negation_data$Polarity <- factor(negation_data$Polarity)
+negation_data <- dplyr::full_join(lda_measure.new.df, negation_data, by=c("Subject", "Item.number", "Polarity", "Response"))
+negation_data_positions$Subject <- factor(negation_data_positions$Subject)
+negation_data_positions <- dplyr::full_join(lda_measure.new.df, negation_data_positions, by=c("Subject", "Item.number", "Polarity"))
+
+
+### Coords only LDA
+load('LDA-Coords.RData')
+normalized_positions.new <- normalized_positions %>%
+  dplyr::select(Subject, Item.number, Polarity, Response, one_of(all_data_columns))
+normalized_positions.new_pca <- bind_cols(normalized_positions.new,
+                                          as.data.frame(predict(m_pca, normalized_positions.new)[,1:n_pca]))
+lda_measure.new.df <- data_frame(
+  lda_measure_coords=c(as.matrix(dplyr::select(normalized_positions.new_pca, starts_with("PC"))) %*% v_lda- b_lda),
+  Subject = normalized_positions.new_pca$Subject, 
+  Item.number = normalized_positions.new_pca$Item.number, 
+  Polarity = normalized_positions.new_pca$Polarity, 
+  Response = normalized_positions.new_pca$Response)
+negation_data <- dplyr::full_join(lda_measure.new.df, negation_data, by=c("Subject", "Item.number", "Polarity", "Response"))
+negation_data_positions <- dplyr::full_join(lda_measure.new.df, negation_data_positions, by=c("Subject", "Item.number", "Polarity"))
+
+
+### Figures: mean and distribution 
+Palette1 <- c("#DB172A", "#1470A5")
+negation_data_true <- filter(negation_data, Response=='true')
+
+png(filename = "fig/OriginalLDA-negation.png", res=300, height = 4, width = 5, units = 'in')
+plot_measure(negation_data_true, "lda_measure", "Polarity")
+dev.off()
+
+png(filename = "fig/CoordsLDA-negation.png", res=300, height = 4, width = 5, units = 'in')
+plot_measure(negation_data_true, "lda_measure_coords", "Polarity")
+dev.off()
+
+
+
+save(negation_data, negation_data_positions, file = "negation_data_processed.RData")
+
+
+## OTHER MT MEASURES ####
+
+### Max Deviation 
+png(filename = "fig/MD_negation.png", res=300, height = 4, width = 5, units = 'in')
+plot_measure(negation_data, 'MaxDeviation', 'Polarity')
+dev.off()
+### MaxLogRatio 
+png(filename = "fig/MaxRatio_negation.png", res=300, height = 4, width = 5, units = 'in')
+plot_measure(negation_data, 'MaxLogRatio', 'Polarity')
+dev.off()
+### AUC 
+png(filename = "fig/AUC_negation.png", res=300, height = 4, width = 5, units = 'in')
+plot_measure(negation_data, 'AUC', 'Polarity')
+dev.off()
+#### X-coordinate flips
+png(filename = "fig/Xflips_negation.png", res=300, height = 4, width = 5, units = 'in')
+plot_measure(negation_data, 'X.flips', 'Polarity')
+dev.off()
+### Acceleration component
+png(filename = "fig/Accflips_negation.png", res=300, height = 4, width = 5, units = 'in')
+plot_measure(negation_data, 'Acc.flips', 'Polarity')
+dev.off()
+
+
+## BASELINE ####
+source("baseline.R")
+
+### Mean Trajectory
+normalized_positions.means.subject <- ddply(normalized_positions.plot_true_af, c("Class", "Time.Step", "Subject"),
+                                            function(normalized_positions.plot_true_af)c(X.Position.mean=mean(normalized_positions.plot_true_af$X.Position, na.rm=T), 
+                                                                                         Y.Position.mean=mean(normalized_positions.plot_true_af$Y.Position, na.rm=T)))
+normalized_positions.means.traj <- ddply(normalized_positions.means.subject, c("Class", "Time.Step"),
+                                         function(normalized_positions.means.subject)c(X.Position.mean=mean(normalized_positions.means.subject$X.Position.mean, na.rm=T), 
+                                                                                       X.Position.se=se(normalized_positions.means.subject$X.Position.mean, na.rm=T),
+                                                                                       Y.Position.mean=mean(normalized_positions.means.subject$Y.Position.mean, na.rm=T), 
+                                                                                       Y.Position.se=se(normalized_positions.means.subject$Y.Position.mean, na.rm=T)))
+palette_baseline <- c('#939393', '#2a2a2a')
+levels(normalized_positions.means.traj$Class) <- c('Early', 'Late')
+ggplot(normalized_positions.means.traj, aes(x=X.Position.mean, y=Y.Position.mean, color=Class, group=Class)) +
+  geom_point(alpha=.7) + 
+  ggtitle('') +
+  xlab('X Coordinate') +
+  ylab('Y Coordinate') +
+  labs(color='Commitment')  +
+  scale_colour_manual(values=palette_baseline) +
+  geom_errorbarh(aes(xmin=X.Position.mean-X.Position.se, xmax=X.Position.mean+X.Position.se), alpha=.4) + 
+  theme_minimal()+
+  expand_limits(x=c(-1.5,1.5)) 
+ggsave('TrajectoriesBaseline.png', plot = last_plot(), scale = 1, dpi = 300, path='fig', width = 7, height = 5)
+
+### LDA on baseline
+levels(negation_data.true_aff$Class) <- c('Early', "Late")
+mydata.agreggated <- ddply(negation_data.true_aff, c("Class", "Subject"),
+                           function(negation_data.true_aff)(c(mean=mean(negation_data.true_aff$lda_measure, na.rm=T))))
+
+mydata.agreggated.overall <- ddply(mydata.agreggated, c("Class"),
+                                   function(mydata.agreggated)(c(LDA=mean(mydata.agreggated$mean, na.rm=T), 
+                                                                 se= se(mydata.agreggated$mean, na.rm=T))))
+
+density <-ggplot(negation_data.true_aff, aes(x=lda_measure, fill=Class, color=Class)) +
+  geom_density(alpha=.5)+
+  scale_colour_manual(values=palette_baseline) +  scale_fill_manual(values=palette_baseline) +
+  theme_minimal() + theme(legend.position = "none")
+
+density <- density + theme_minimal() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                                             panel.background = element_blank(), 
+                                             axis.title.x=element_blank(),
+                                             axis.text.x=element_blank(),
+                                             legend.text = element_text(size = 14), 
+                                             legend.title = element_text(size = 14), 
+                                             axis.title = element_text(size = 13), 
+                                             axis.text = element_text(size = 13)) + border() + theme(plot.margin = unit(c(0.3, 0, 0.3, 0.3), "cm"))
+
+sp <- ggbarplot(mydata.agreggated.overall, y = "LDA", x = "Class", ylab= FALSE, 
+                color = "Class", palette = palette_baseline, fill="Class",
+                alpha = 0.6) +   geom_errorbar(aes(ymin=LDA-se, ymax=LDA+se), width=.1) + border()  + rotate() 
+
+sp <- sp + theme(axis.title.y=element_blank(),
+                 axis.text.y=element_blank(),
+                 axis.ticks.y=element_blank(),
+        legend.text = element_text(size = 14), 
+        legend.title = element_text(size = 14), 
+        axis.title = element_text(size = 13), 
+        axis.text = element_text(size = 13), 
+        plot.margin = unit(c(0, 0.3, 0.3, 0.3), "cm"))
+        
+
+ggarrange(density, sp, 
+          ncol = 1, nrow = 2,  align = "v", 
+          widths = c(1, 1), heights = c(1,0.5),
+          common.legend = TRUE)
+ggsave('LDA-baseline.png', plot = last_plot(), scale = 1, dpi = 300, path='fig', width = 7, height = 5)
+
+
+
+```
+
+
+
