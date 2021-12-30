@@ -20,19 +20,19 @@ pacman::p_load(pROC, devtools, reshape2, mousetrap)
 ```
 
 
+## Load in Data
 ```{r}
 spivey_df <- read_bulk("../Our_data")
 ```
 
-## Load data 
 ```{r}
+#Subset for the relevant columns.  
 spivey_df_short <- spivey_df %>% 
   dplyr::select(left_stimuli_1, right_stimuli_1, timestamps_mouse, sound, practice, timestamps_mouse, xpos_mouse, ypos_mouse, response, response_time, count_trial_sequence, correct_response, correct, subject_nr, trial_type, live_row )
 
 write_csv(spivey_df_short, "mouse_spivey_short.csv")
 
 ```
-
 
 ```{r}
 #Subset for Accuracy == TRUE.
@@ -45,6 +45,7 @@ spivey_df_short_correct$subject_nr <- factor(spivey_df_short_correct$subject_nr)
 
 
 ```{r}
+#Percentage correct.
 print(c(nrow(spivey_df_short_correct)/nrow(spivey_df_short)*100, "% correct"))
 ```
 
@@ -54,11 +55,12 @@ m <- mt_import_mousetrap(spivey_df_short_correct)
 ```
 
 ```{r}
+#First look at data. 
 mt_plot(data = m , use = "trajectories", color = "trial_type")
 ```
 
 ```{r}
-#remap
+#remap (flip X-coordinates so target is always on the same side)
 m <- mt_remap_symmetric(
   m, 
   use = 'trajectories',
@@ -82,6 +84,8 @@ mt_plot(
 )
 ```
 ```{r}
+#Remove initiation. 
+
 m <- mt_exclude_initiation(m)
 mt_plot(
   m, 
@@ -92,27 +96,19 @@ mt_plot(
 )
 ```
 ```{r}
+# Time normalize
 m <- mt_time_normalize(m, nsteps = 101) #creates tn_trajectories
 
-
-as.data.frame(m$tn_trajectories)
 mt_plot(
   m, 
   use = 'tn_trajectories',
   color = 'trial_type'
 )
 
-mt_plot(
-  m, 
-  x = 'timestamps',
-  y = 'xpos',
-  use = 'tn_trajectories',
-  color = 'trial_type' 
-)
 ```
-```{r}
-#Final prep of data.
 
+
+```{r}
 #Make the end and start point together. 
 m <- mt_align(
   m,
@@ -143,8 +139,8 @@ m <- mt_scale_trajectories(
 
 ```
 
-
 ```{r}
+#Show average trajectories for the two curves 
 mt_plot_aggregate(
   m, 
   use = 'tn_align_trajec',
@@ -154,11 +150,8 @@ mt_plot_aggregate(
     title = 'Aggregated time-normalized mouse trajectories')
 ```
 
-```{r}
 
-```
-
-
+# Getting Final Mouse Tracking measures such as acceleration, velocity, AUC etc. 
 ```{r}
 #Measures calculated using tn (time normalized and space normalized)
 m <- mt_measures(
@@ -179,9 +172,10 @@ m <- mt_derivatives(
   return_delta_time = FALSE,
   verbose = FALSE
 )
+```
 
 
-
+```{r}
 derivs <- mt_export_wide(m$deriv)
 
 toMatch <- c("acc", "vel", "time", "dist")
@@ -191,16 +185,9 @@ trajec <- mt_export_wide(m$final_trajec)
 toMatch2 <- c("z_")
 trajecs_ok <- trajec[, grepl(paste(toMatch2, collapse = "|"), names(trajec))]
 
+#Combine trajectories, derivatives and other mouse data into 1 data frame. 
 spivey_df_data <- cbind(trajecs_ok, derivs, m$data)
 ```
-
-```{r}
-# USe this data for Using MAD, MD (Maximum Deviation), AUC (Area under the curve for optimal straight line).
-m$measures
-
-roc()
-```
-
 
 
 
@@ -309,13 +296,11 @@ all_data_columns_spivey2 <- names(dplyr::select(normalized_positions_tr_spivey,
 normalized_positions_tr_spivey[all_data_columns_spivey2] <- sapply(normalized_positions_tr_spivey[all_data_columns_spivey2],as.numeric)
 
 
+
 final_PCA_DATA <- normalized_positions_tr_spivey %>% 
   dplyr::select(one_of(all_data_columns))
 
-
-
-
-#Do PCA on the entire data
+#Do PCA on the entire data "not using Maldonado pre trained model".
 our_model <- prcomp(final_PCA_DATA, center = TRUE, scale = TRUE)
 ```
 
@@ -334,9 +319,10 @@ lda_measure.new.df_spivey <- data_frame(
 ggplot(lda_measure.new.df_spivey, aes(x = lda_measure, col = Polarity)) + geom_density()
 ```
 
-## BEING ABLE TO USE PREDICT! 
+## BEING ABLE TO USE PREDICT not possible...! 
 
 ```{r}
+#Experiment but didn't work. 
 load("/Users/sigurd/Documents/Perception and Action/Perception-Action-Exam/R 2/LDA-Full.RData") #load m_pca etc. 
 
 final_PCA_PREDICT <- normalized_positions.new.spivey %>% 
@@ -358,28 +344,33 @@ final_PCA_PREDICT[X_data_columns_spivey] <- final_PCA_PREDICT[X_data_columns_spi
 
 #Numeric
 final_PCA_PREDICT[all_data_columns] <- sapply(final_PCA_PREDICT[all_data_columns],as.numeric)
+```
 
 
-m$measures
-
+```{r}
 #CSV FILE FOR 
 csv_file_for_python = cbind(final_PCA_PREDICT, m$measures)
 #write 
 write_csv(final_PCA_PREDICT, "spivey_data_for_pca.csv")
+```
+
+
+```{r}
+#FILE USED in Python script. 
 write_csv(csv_file_for_python, "spivey_data_for_python.csv")
+```
 
 
-
+```{r}
 #TIME TO PREDICT
-predict(m_pca, final_PCA_PREDICT)
+#predict(m_pca, final_PCA_PREDICT)
 
 
-# Test names
-colnames(final_PCA_PREDICT) == colnames(normalized_positions.new)
-ncol(final_PCA_PREDICT) == ncol(normalized_positions.new)
+# Test names to see if they match. 
+#colnames(final_PCA_PREDICT) == colnames(normalized_positions.new)
+#ncol(final_PCA_PREDICT) == ncol(normalized_positions.new)
 
-as.data.frame(final_PCA_PREDICT)
-as.data.frame(normalized_positions.new)
+
 ```
 
 
