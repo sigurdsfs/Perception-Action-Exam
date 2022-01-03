@@ -89,9 +89,11 @@ ggplot(calibration_data_positions_overall.means, aes(x=X.Position.mean, y=Y.Posi
 ### Applying the LDA to validation data
 #source("R_scripts/calibration/LDA.R")
 
-write_csv(pca_data_pyton, "PCA_DATA_CALIBRATION.csv")
 
 LDA_training.coord.dist(calibration_data)
+#Used in Python
+write_csv(pca_data_python, "PCA_CALIBRATION_2.csv")
+
 save(m_pca, v_lda, b_lda, n_pca, all_data_columns, file="LDA-Full.RData")
 calibration_data <- dplyr::full_join(lda_measure.df, calibration_data, by=c("Subject", "Item.number", "Expected_response"))
 calibration_data_positions <- dplyr::full_join(lda_measure.df, calibration_data_positions, by=c("Subject", "Item.number", "Expected_response"))
@@ -358,6 +360,10 @@ rm(auc.bins_subset)
 save(auc.pvalues, auc.means, file="Validation-ttest.RData")
 ```
 
+```{r}
+as.data.frame(normalized_positions)
+```
+
 
 ```{r}
 ### FIGURES ####
@@ -379,8 +385,8 @@ p1 <- ggplot(data=subset(auc.bins_change, variable=='Original LDA' |variable=='B
         axis.title = element_text(size = 13), 
         axis.text = element_text(size = 13))
 
-p2 <- ggplot(data=subset(auc.bins_change, variable %in% c("Original LDA", "LDA Vel,Acc", "LDA Coords,Vel", "LDA Vel", "LDA Acc", "LDA Coords", "Topline" , "Baseline")), aes(x=bins, y=value, group=variable, colour=variable)) +
-  #p2 <-  ggplot(data=subset(auc.bins_change, variable %in% c("LDA Vel,Acc", "LDA Coords,Vel", "LDA Vel", "LDA Acc", "LDA Coords")), aes(x=bins, y=value, group=variable, colour=variable)) +
+#p2 <- ggplot(data=subset(auc.bins_change, variable %in% c("Original LDA", "LDA Vel,Acc", "LDA Coords,Vel", "LDA Vel", "LDA Acc", "LDA Coords", "Topline" , "Baseline")), aes(x=bins, y=value, group=variable, colour=variable)) +
+p2 <-  ggplot(data=subset(auc.bins_change, variable %in% c("LDA Vel,Acc", "LDA Coords,Vel", "LDA Vel", "LDA Acc", "LDA Coords")), aes(x=bins, y=value, group=variable, colour=variable)) +
   geom_line(aes(linetype=point), # Line type depends on cond
           size = 1, alpha=.7,  position=position_jitter(w=0, h=0.015)) +
   #geom_point(size=2) +

@@ -44,6 +44,7 @@ print('percentage of innaccurate trials:')
 print(nrow(non_accurate_data)/nrow(negation_data))
 negation_data <- subset(negation_data, Accuracy==TRUE)
 negation_data_positions <- subset(negation_data_positions, Accuracy==TRUE)
+
 ```
 
 
@@ -129,7 +130,7 @@ load('/Users/sigurd/OneDrive - Aarhus Universitet/Perception and Action (3rd Sem
 ### GO INTO norm_positions_LDA.R and run to get normalized_positions. 
 normalized_positions.new <- normalized_positions %>%
   dplyr::select(Subject, Item.number, Polarity, Response, one_of(all_data_columns))
-
+write.csv(normalized_positions.new, "Sigurd_Negation_PCA_data.csv")
 
 #Do PCA all data
 normalized_positions.new_pca <- bind_cols(normalized_positions.new,
@@ -160,6 +161,7 @@ negation_data_positions <- dplyr::full_join(lda_measure.new.df, negation_data_po
 
 normalized_positions.new <- normalized_positions %>%
   dplyr::select(Subject, Item.number, Polarity, Response, one_of(all_data_columns))
+
 
 normalized_positions.new_pca <- bind_cols(normalized_positions.new,
                                           as.data.frame(predict(m_pca, normalized_positions.new)[,1:n_pca]))
@@ -545,6 +547,7 @@ p3 <- p3 + guides(linetype=FALSE)
           #widths = c(1, 1), heights = c(1,1), labels = c("A", "B"))
 p3
 p4
+ggsave('AURUC_negation.png', plot = p3)
 #ggsave('auc_permutation_negation_2.png', plot = last_plot(), scale = 1, dpi = 300,width = 14, height=8, path='paper/R/fig')
 
 ```

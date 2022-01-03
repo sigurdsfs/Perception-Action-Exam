@@ -19,6 +19,13 @@ pacman::p_load(ellipse, tidyverse, Hmisc, plyr)
 pacman::p_load(pROC, devtools, reshape2, mousetrap)
 ```
 
+## Functions
+```{r}
+find_constant <- function(d, epsilon=1e-4) {
+  names(d)[apply(d,2,function(x) is.na(var(x)) || sqrt(var(x)) < epsilon)]
+}
+```
+
 
 ## Load in Data
 ```{r}
@@ -259,7 +266,7 @@ normalized_positions.new.spivey <- spivey_df_data %>%
 ```
 
 ```{r}
-#Find Constant Col's
+#Find Constant Cols
 constant_columns_ctl <- normalized_positions.new.spivey %>%
   filter(Polarity == "control") %>%
   dplyr::select(starts_with("x"), starts_with("y"), starts_with('v'), starts_with('a')) %>%
@@ -294,29 +301,22 @@ all_data_columns_spivey2 <- names(dplyr::select(normalized_positions_tr_spivey,
                                           starts_with("a")))
 
 normalized_positions_tr_spivey[all_data_columns_spivey2] <- sapply(normalized_positions_tr_spivey[all_data_columns_spivey2],as.numeric)
-
-
-
-final_PCA_DATA <- normalized_positions_tr_spivey %>% 
-  dplyr::select(one_of(all_data_columns))
-
-#Do PCA on the entire data "not using Maldonado pre trained model".
-our_model <- prcomp(final_PCA_DATA, center = TRUE, scale = TRUE)
 ```
 
+
 ```{r}
-normalized_positions.new_pca_spivey <- bind_cols(normalized_positions_tr_spivey,
-                                          as.data.frame(predict(our_model, final_PCA_DATA)[,1:13]))
+#normalized_positions.new_pca_spivey <- bind_cols(normalized_positions_tr_spivey,
+#                                          as.data.frame(predict(our_model, final_PCA_DATA)[,1:13]))
 
-lda_measure.new.df_spivey <- data_frame(
-  lda_measure=c(as.matrix(dplyr::select(normalized_positions.new_pca_spivey, starts_with("PC"))) %*% v_lda- b_lda),
-  Subject = normalized_positions.new_pca_spivey$Subject, 
-  Item.number = normalized_positions.new_pca_spivey$Item.number, 
-  Polarity = normalized_positions.new_pca_spivey$Polarity, 
-  Response = normalized_positions.new_pca_spivey$Response)
+#lda_measure.new.df_spivey <- data_frame(
+ # lda_measure=c(as.matrix(dplyr::select(normalized_positions.new_pca_spivey, starts_with("PC"))) %*% v_lda- b_lda),
+  #Subject = normalized_positions.new_pca_spivey$Subject, 
+#  Item.number = normalized_positions.new_pca_spivey$Item.number, 
+ # Polarity = normalized_positions.new_pca_spivey$Polarity, 
+  #Response = normalized_positions.new_pca_spivey$Response)
 
 
-ggplot(lda_measure.new.df_spivey, aes(x = lda_measure, col = Polarity)) + geom_density()
+# ggplot(lda_measure.new.df_spivey, aes(x = lda_measure, col = Polarity)) + geom_density()
 ```
 
 ## BEING ABLE TO USE PREDICT not possible...! 
